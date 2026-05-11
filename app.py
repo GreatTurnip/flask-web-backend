@@ -1,11 +1,23 @@
 from flask import Flask,jsonify,request
-
+import sqlite3
+def get_db():
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+def init_db():
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL
+        )
+    
+    """)
+    conn.commit()
+    conn.close()
 app = Flask(__name__)
 
-posts = [
-    {"id": 1, "title": "First Post", "content": "Hello world"},
-    {"id": 2, "title": "Second Post", "content": "Learning Flask"}
-]
 @app.route("/")
 def index():
     return "Hello, World!"
@@ -33,7 +45,13 @@ def create_post():
 @app.route("/posts", methods=["GET"])
 def get_posts():
     limit = request.args.get("limit")
+    #here i will create a connection to db and fetch data from the db
+    conn = get_db() #open connection
+    cursor = conn.execute("SELECT * FROM posts") #runs and sql command
+    rows = cursor.fetchall() #fetches all the output
+    conn.close() #close the connection and the result is stored in rows
 
+    posts = [dict(row) for row in rows]
     if limit:
         limit = int(limit)
         return jsonify(posts[:limit])
@@ -59,4 +77,5 @@ def delete_post(id):
             return jsonify({"message":"Post deleted"}),200
     return jsonify({"error":"Post not found"}), 404
 if __name__ == "__main__":
+    init_db()
     app.run()
